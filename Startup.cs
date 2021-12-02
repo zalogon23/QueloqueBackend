@@ -82,6 +82,7 @@ namespace backend
 
       services.AddSingleton<SessionsServices>();
       services.AddSingleton<AuthenticationTokensServices>();
+      services.AddSingleton<UsersServices>();
 
       services.AddSignalR();
       services.AddControllers();

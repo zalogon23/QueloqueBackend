@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using backend.Models.Dtos;
 using backend.Models.Options;
 using backend.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 
@@ -17,24 +18,22 @@ namespace backend.Controllers
   {
     private readonly IJWTOptions _jwtOptions;
     private readonly AuthenticationTokensServices _authenticationTokensServices;
+    private readonly UsersServices _usersServices;
     public QueloqueController(
       IJWTOptions jwtOptions,
-      AuthenticationTokensServices authenticationTokensServices
+      AuthenticationTokensServices authenticationTokensServices,
+      UsersServices usersServices
       )
     {
       _jwtOptions = jwtOptions;
       _authenticationTokensServices = authenticationTokensServices;
+      _usersServices = usersServices;
     }
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginDtoRequest loginDto)
     {
 
-      // LOGIC FOR GETTING THE USER
-      var user = new
-      {
-        Id = loginDto.Username
-      };
-      // ---------------------------
+      var user = await _usersServices.GetUserByLogin(loginDto.Username, loginDto.Password);
 
       if (user is null)
       {
@@ -79,6 +78,19 @@ namespace backend.Controllers
         Console.WriteLine(err.Message);
         return BadRequest();
       }
+    }
+    [Authorize]
+    [HttpGet("self")]
+    public async Task<IActionResult> Self()
+    {
+      var claims = HttpContext.User?.Identity as ClaimsIdentity;
+      if (claims is null) return Unauthorized();
+      var claim = claims.FindFirst(ClaimTypes.Name);
+      string id = claim.Value;
+      if (id is null) return Unauthorized();
+      var user = await _usersServices.GetUserById(id);
+      if (user is null) return Unauthorized();
+      return Ok(user);
     }
   }
 }
